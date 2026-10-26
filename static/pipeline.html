@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RAG Workbench — Light</title>
+  <link rel="stylesheet" href="css/style.css?v=sidebar_collapse_v3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div class="page">
+    <!-- Sidebar with restored functionality -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">✦</div>
+        <h2>RAG Workbench</h2>
+      </div>
+
+      <!-- Mode & Pipeline -->
+      <details open class="panel">
+        <summary>⚙️ Configuration</summary>
+
+        <label class="label">Mode</label>
+        <select id="mode" class="control">
+          <option value="remote" selected>API (Docker)</option>
+          <option value="local">Local (Mock)</option>
+        </select>
+
+        <label class="label">RAG Pipeline</label>
+        <select id="pipeline-select" class="control">
+          <option value="simple_rag">Simple RAG</option>
+          <!-- <option value="graph_rag">Graph RAG</option> -->
+          <option value="multimodal_rag">Multimodal RAG</option>
+          <option value="agentic_rag">Agentic RAG</option>
+        </select>
+
+        <!-- Dynamic elements based on selection -->
+        <div id="voice-settings-panel" style="display: none; margin-top: 12px;">
+          <label class="label">Voice Config</label>
+          <div style="margin-bottom: 8px;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="tts-enabled" /> Enable TTS
+            </label>
+          </div>
+          <select id="voice-select" class="control">
+            <option value="af_sarah">Sarah</option>
+            <option value="af_bella">Bella</option>
+            <option value="am_adam">Adam</option>
+          </select>
+        </div>
+      </details>
+
+      <!-- Models -->
+      <details class="panel" open>
+        <summary>🧠 Models</summary>
+        <div class="control" style="padding: 8px; font-size: 13px; background: rgba(0,0,0,0.05); border-radius: 4px;">
+          <strong>Active Model:</strong><br>
+          Gemma-3-4B-IT<br>
+          <span style="font-size: 11px; color: var(--text-muted);">(Running on CPU)</span>
+        </div>
+      </details>
+
+      <!-- Tools & Agents -->
+      <details id="tools-panel" class="panel" open>
+        <summary>🛠️ Tools & Agents</summary>
+        <div class="checkbox-grid">
+          <label class="checkbox-label"><input type="checkbox" class="tool-checkbox" value="web_search"> Web
+            Search</label>
+           <!-- <label class="checkbox-label"><input type="checkbox" class="tool-checkbox" value="pdf_analyzer"> PDF
+            Analyzer</label> -->
+          <!-- <label class="checkbox-label"><input type="checkbox" class="tool-checkbox" value="calculator">
+            Calculator</label>
+          <label class="checkbox-label"><input type="checkbox" class="tool-checkbox" value="image_gen"> Image
+            Gen</label> -->
+        </div>
+      </details>
+
+      <!-- Knowledge Base -->
+      <details class="panel" open>
+        <summary>📚 Knowledge Base</summary>
+
+        <div id="upload-area" class="upload-area">
+          <div>⬆</div>
+          <div class="upload-text">Drag files or click</div>
+          <!-- Hidden file input triggered by upload area click -->
+          <input id="fileInput" type="file" multiple style="display: none;" />
+        </div>
+
+        <!-- Selected Files Preview -->
+        <div id="selected-files-preview" style="display: none; margin-top: 8px;">
+          <div class="label" style="font-size: 11px; color: var(--text-muted);">Selected Files:</div>
+          <div id="selected-files-list" style="font-size: 11px; color: var(--text); margin-top: 4px;"></div>
+        </div>
+
+        <button id="btnUpload" class="btn btn-primary" style="margin-top: 8px;">Upload Selected</button>
+
+        <!-- Processing Status for Each RAG Type -->
+        <div id="processing-status" style="display: none; margin-top: 12px;">
+          <div class="label" style="font-size: 12px; margin-bottom: 8px;">Processing Status:</div>
+          <div id="rag-status-list"></div>
+        </div>
+
+        <div id="uploadProgress" class="upload-text" style="height: 14px;"></div>
+
+        <div style="margin-top: 12px;">
+          <div class="label">Uploaded Documents</div>
+          <ul id="doc-list" class="list">
+            <li class="list-item" style="color: var(--text-muted); justify-content: center;">No documents</li>
+          </ul>
+        </div>
+
+        <button id="reset-kb" class="btn btn-danger" style="margin-top: 12px;">Reset ALL</button>
+
+        <!-- Status Monitor (New) -->
+        <div id="kb-monitor"
+          style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); display: none;">
+          <div class="label" style="display: flex; justify-content: space-between;">
+            <span>Vector Storage</span>
+            <span id="kb-status-dot" class="status-dot"></span>
+          </div>
+          <div id="kb-stats" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            Checking sync status...
+          </div>
+        </div>
+
+        <!-- KB Version tracking hidden element -->
+        <span id="kb-version" style="display:none;">1</span>
+      </details>
+
+      <!-- History -->
+      <details class="panel">
+        <summary>🕘 History</summary>
+        <ul id="chat-history" class="list"></ul>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button id="btnNewSession" class="btn btn-ghost" style="flex: 1;">New Chat</button>
+          <button id="btnClearChat" class="btn btn-ghost" style="flex: 1;">Clear</button>
+        </div>
+      </details>
+
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="main">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <!-- Mobile Toggle -->
+          <!-- Mobile Toggle -->
+          <button id="menu-toggle" class="menu-toggle">☰</button>
+          <div class="header-title" id="selected-pipeline">Simple RAG</div>
+        </div>
+
+        <div id="system-status" class="status-badge">
+          <span class="status-dot"></span> System Check...
+        </div>
+      </header>
+
+      <div class="ready-popup" id="ready-popup">
+        <span style="font-size: 16px;">✓</span>
+        <span>Ready to chat! Context loaded.</span>
+      </div>
+
+      <div class="chat-panel">
+        <div class="chat-window" id="chat-window">
+          <!-- Bubbles injected here -->
+        </div>
+
+        <div class="input-area">
+          <form id="chat-form" class="input-container">
+            <label for="attachInput" class="btn-icon" style="font-size: 18px; cursor: pointer;"
+              title="Attach Image">📎</label>
+            <input type="file" id="attachInput" accept="image/*,.pdf" style="display: none;" />
+
+            <button type="button" id="btnRecord" class="btn-icon" style="font-size: 18px;" title="Record">🎤</button>
+            <input id="chat-input" type="text" class="chat-input" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" class="btn-send">➤</button>
+          </form>
+
+          <!-- Attachment Preview Area -->
+          <div id="attach-preview" class="info" style="display: none; margin-top: 8px; align-items: center; gap: 8px;">
+            <span id="attach-name"
+              style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);"></span>
+            <button id="clear-attach" class="btn ghost" style="font-size: 12px; padding: 0 4px;">✕</button>
+          </div>
+
+          <!-- Use PDF Context Checkbox -->
+          <div style="text-align: center; margin-top: 8px;">
+            <label style="font-size: 11px; color: var(--text-muted); cursor: pointer;">
+              <input type="checkbox" id="use-pdf-context" checked> Use PDF Context
+            </label>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/app.js?v=agentic_rag_v3" defer></script>
+
+</body>
+
+</html>

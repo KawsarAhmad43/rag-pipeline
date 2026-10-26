@@ -1,0 +1,54 @@
+# # Core PyTorch + CUDA (GPU)
+# torch==2.2.2
+# torchvision==0.17.2
+# torchaudio==2.2.2
+
+# # Transformers + HuggingFace tools
+# transformers==4.51.3
+# sentence-transformers==2.5.1
+# huggingface-hub==0.23.0
+# accelerate==0.30.1
+
+# # Vector Databases
+# chromadb==0.4.15
+# weaviate-client==4.4.0  # Optional if switching back
+
+# # OCR & Document Handling
+# pillow==10.3.0
+# pytesseract==0.3.10
+# PyMuPDF==1.23.26  # For PDF parsing (fitz)
+
+# # FastAPI + Server
+# fastapi==0.103.2
+# uvicorn==0.23.2
+# python-multipart==0.0.9
+
+# # Utilities
+# scikit-learn==1.4.2
+# numpy==1.26.4
+# requests==2.31.0
+# tqdm==4.66.4
+# aiofiles==23.2.1  # For async file handling in FastAPI
+# pydantic
+
+# # Optional: Logging & Debug
+# loguru==0.7.2
+
+
+torch
+transformers==4.51.3
+chromadb
+langchain
+pymupdf
+pillow
+fastapi
+uvicorn
+sentence-transformers
+pydantic
+python-dotenv
+numpy
+langchain
+langchain-community
+pypdf2
+librosa
+scipy

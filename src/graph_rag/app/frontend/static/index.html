@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graph RAG Chatbot - Grok Style Fullscreen</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(145deg, #4c1d95 0%, #8b5cf6 100%);
+      overflow: hidden;
+    }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+    .chat-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 3px;
+    }
+    .typing-dot {
+      animation: typing 0.8s infinite ease-in-out;
+    }
+    @keyframes typing {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+    .chat-message {
+      animation: slideIn 0.5s ease-out;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .send-button:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(1.1) rotate(2deg);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+    }
+    .input-glass:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .sidebar-link:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(5px);
+    }
+    .toggle-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+    .copy-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+    .particle {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      animation: float 15s infinite linear;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) scale(0.8); }
+      100% { transform: translateY(-20vh) scale(1.2); }
+    }
+    .sidebar {
+      transition: transform 0.3s ease-in-out;
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+    }
+    .recent-chats {
+      margin-top: 20px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .recent-chats-title {
+      text-white text-md font-semibold mb-2;
+    }
+    .recent-chat-list {
+      max-height: 800px;
+      overflow-y: auto;
+      margin-top: 5px;
+    }
+    .recent-chat-item, .uploaded-pdf-item {
+      padding: 8px 12px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      word-wrap: break-word; /* Allow long titles to wrap */
+    }
+    .recent-chat-item:hover, .uploaded-pdf-item:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .profile-section {
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    .status-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #ffffff;
+    }
+    .status-label .dot {
+      width: 8px;
+      height: 8px;
+      background-color: #00ff00;
+      border-radius: 50%;
+    }
+    .status-down .dot {
+      background-color: #ff0000;
+    }
+    .status-initializing .dot {
+      background-color: #ffa500;
+    }
+    .upload-container, .knowledges-container {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      padding: 20px;
+    }
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 20px;
+      border-radius: 12px;
+      color: white;
+      z-index: 1000;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+    .pdf-viewer {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .pdf-viewer iframe {
+      width: 80%;
+      height: 80%;
+      border: none;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body class="flex min-h-screen relative">
+  <div class="particle w-2 h-2 top-10 left-10"></div>
+  <div class="particle w-3 h-3 top-40 right-20" style="animation-delay: -5s;"></div>
+  <div class="particle w-2 h-2 bottom-20 left-40" style="animation-delay: -10s;"></div>
+  <div class="particle w-3 h-3 bottom-10 right-30" style="animation-delay: -2s;"></div>
+  <div id="sidebar" class="sidebar w-64 h-full glass-effect p-4 fixed md:static z-20 flex flex-col space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-white text-lg font-bold">Menu</h2>
+    </div>
+    <nav class="space-y-2">
+      <a href="#" id="new-chat" class="sidebar-link flex items-center space-x-2 p-2 rounded-lg text-white/90 hover:text-white transition glass-effect">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>New Chat</span>
+      </a>
+      <a href="#" id="history" class="sidebar-link flex items-center space-x-2 p-2 rounded-lg text-white/90 hover:text-white transition glass-effect">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>History</span>
+      </a>
+      <a href="#" id="upload-pdf" class="sidebar-link flex items-center space-x-2 p-2 rounded-lg text-white/90 hover:text-white transition glass-effect">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12l-4-4m0 0l-4 4m4-4v12" />
+        </svg>
+        <span>Upload PDF</span>
+      </a>
+      <a href="#" id="uploaded-knowledges" class="sidebar-link flex items-center space-x-2 p-2 rounded-lg text-white/90 hover:text-white transition glass-effect">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 2h9l5 5v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h2z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2v6h6" />
+        </svg>
+        <span>Uploaded Knowledges</span>
+      </a>
+      <a href="#" id="settings" class="sidebar-link flex items-center space-x-2 p-2 rounded-lg text-white/90 hover:text-white transition glass-effect">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+        <span>Settings</span>
+      </a>
+    </nav>
+    <div class="recent-chats flex flex-col">
+      <h3 class="recent-chats-title text-white text-md font-semibold mb-2">Recent Chats</h3>
+      <div id="recent-chat-list" class="recent-chat-list space-y-1"></div>
+    </div>
+    <div class="profile-section">
+      <div class="flex items-center space-x-2 text-white">
+        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center glass-effect">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <span>John Doe</span>
+      </div>
+    </div>
+  </div>
+  <div id="main-content" class="flex flex-col flex-1 h-screen glass-effect">
+    <div class="p-6 bg-gradient-to-r from-purple-900 to-indigo-800 text-white flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <button id="toggle-sidebar" class="toggle-button p-2 rounded-lg bg-white/20 text-white transition">
+          <svg id="toggle-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">Graph RAG Chatbot</h1>
+        </div>
+      </div>
+      <div id="status-label" class="status-label status-initializing">
+        <span class="dot"></span>
+        <span>System Initializing</span>
+      </div>
+    </div>
+    <div id="chat-container" class="chat-container flex-1 p-6 overflow-y-auto space-y-5 bg-gradient-to-b from-transparent to-black/5"></div>
+    <div id="upload-container" class="upload-container">
+      <h2 class="text-white text-xl font-bold mb-4">Upload PDF</h2>
+      <form id="upload-form" class="flex flex-col space-y-4 glass-effect p-4 rounded-xl">
+        <input type="file" id="pdf-file" accept=".pdf" class="p-3 bg-transparent text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:bg-white/20 file:text-white file:border-0 hover:file:bg-white/30">
+        <div class="flex space-x-4">
+          <button type="submit" id="upload-button" class="p-3 bg-white/25 text-white rounded-lg transition duration-300 hover:bg-white/35">Upload</button>
+          <button type="button" id="go-back" class="p-3 bg-white/25 text-white rounded-lg transition duration-300 hover:bg-white/35">Go Back</button>
+        </div>
+      </form>
+      <div id="loader" class="loader mt-3">
+        <div class="flex space-x-2">
+          <div class="w-3 h-3 bg-white/60 rounded-full typing-dot" style="animation-delay: 0ms;"></div>
+          <div class="w-3 h-3 bg-white/60 rounded-full typing-dot" style="animation-delay: 200ms;"></div>
+          <div class="w-3 h-3 bg-white/60 rounded-full typing-dot" style="animation-delay: 400ms;"></div>
+        </div>
+        <span class="text-white">Processing...</span>
+      </div>
+    </div>
+    <div id="knowledges-container" class="knowledges-container">
+      <h2 class="text-white text-xl font-bold mb-4">Uploaded Knowledges</h2>
+      <div id="knowledges-list" class="glass-effect p-4 rounded-xl space-y-2 recent-chat-list">
+        <div id="knowledges-loading" class="text-white">Loading...</div>
+      </div>
+      <button id="knowledges-go-back" class="mt-4 p-3 bg-white/25 text-white rounded-lg transition duration-300 hover:bg-white/35">Go Back</button>
+    </div>
+    <div class="p-5 bg-transparent">
+      <form id="chat-form" class="flex items-center space-x-4 glass-effect p-3 rounded-xl input-glass transition">
+        <input
+          type="text"
+          id="user-input"
+          placeholder="What’s on your mind?"
+          class="flex-1 p-3 bg-transparent text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 rounded-lg"
+        />
+        <button
+          type="submit"
+          class="send-button p-3 bg-white/25 text-white rounded-lg transition duration-300"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+  <div id="success-popup" class="popup">
+    <p>PDF has been processed successfully and knowledge base has been updated!</p>
+    <button id="close-popup" class="mt-4 p-2 bg-white/25 text-white rounded-lg transition duration-300 hover:bg-white/35">Close</button>
+  </div>
+  <div id="pdf-viewer" class="pdf-viewer">
+    <div class="glass-effect p-4 rounded-lg relative max-w-4xl w-full">
+      <button id="close-pdf" class="absolute top-2 right-2 p-2 bg-white/25 text-white rounded-lg transition duration-300 hover:bg-white/35">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <iframe id="pdf-iframe" src=""></iframe>
+    </div>
+  </div>
+  <script>
+    const chatContainer = document.getElementById('chat-container');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const sidebar = document.getElementById('sidebar');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const toggleIcon = document.getElementById('toggle-icon');
+    const statusLabel = document.getElementById('status-label');
+    const recentChatList = document.getElementById('recent-chat-list');
+    const uploadContainer = document.getElementById('upload-container');
+    const knowledgesContainer = document.getElementById('knowledges-container');
+    const mainContent = document.getElementById('main-content');
+    const uploadForm = document.getElementById('upload-form');
+    const pdfFile = document.getElementById('pdf-file');
+    const uploadButton = document.getElementById('upload-button');
+    const goBackButton = document.getElementById('go-back');
+    const knowledgesGoBackButton = document.getElementById('knowledges-go-back');
+    const loader = document.getElementById('loader');
+    const successPopup = document.getElementById('success-popup');
+    const closePopup = document.getElementById('close-popup');
+    const knowledgesList = document.getElementById('knowledges-list');
+    const pdfViewer = document.getElementById('pdf-viewer');
+    const pdfIframe = document.getElementById('pdf-iframe');
+    const closePdfButton = document.getElementById('close-pdf');
+    const API_URL = 'http://localhost:2000';
+    const getTimestamp = () => {
+      const now = new Date();
+      return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+    async function updateStatus() {
+      try {
+        const response = await fetch(`${API_URL}/health`, { method: 'GET' });
+        const data = await response.json();
+        if (response.ok && data.status === 'healthy') {
+          statusLabel.className = 'status-label';
+          statusLabel.innerHTML = '<span class="dot"></span><span>System Standby</span>';
+        } else {
+          statusLabel.className = 'status-label status-down';
+          statusLabel.innerHTML = '<span class="dot"></span><span>System Down</span>';
+        }
+      } catch (error) {
+        statusLabel.className = 'status-label status-down';
+        statusLabel.innerHTML = '<span class="dot"></span><span>System Down</span>';
+      }
+    }
+    async function populateRecentChats() {
+      try {
+        const response = await fetch(`${API_URL}/graph/chat-memory/`, { method: 'GET' });
+        const data = await response.json();
+        recentChatList.innerHTML = '';
+        if (data.chat_memory && data.chat_memory.length > 0) {
+          data.chat_memory.forEach(chat => {
+            const chatItem = document.createElement('div');
+            chatItem.className = 'recent-chat-item';
+            chatItem.textContent = chat.query.length > 30 ? chat.query.substring(0, 27) + '...' : chat.query;
+            chatItem.onclick = () => {
+              addMessage(`Q: ${chat.query}\nA: ${chat.response}`, 'bot', chat.context_type);
+            };
+            recentChatList.appendChild(chatItem);
+          });
+        } else {
+          const noChats = document.createElement('div');
+          noChats.className = 'recent-chat-item';
+          noChats.textContent = 'No recent chats';
+          recentChatList.appendChild(noChats);
+        }
+      } catch (error) {
+        console.error('Error fetching chat memory:', error);
+        const errorItem = document.createElement('div');
+        errorItem.className = 'recent-chat-item';
+        errorItem.textContent = 'Error loading chats';
+        recentChatList.appendChild(errorItem);
+      }
+    }
+    async function populateUploadedPdfs() {
+      try {
+        knowledgesList.innerHTML = '<div id="knowledges-loading" class="text-white">Loading...</div>';
+        const response = await fetch(`${API_URL}/graph/uploaded-pdfs/`, { method: 'GET' });
+        const data = await response.json();
+        knowledgesList.innerHTML = '';
+        if (data.pdfs && data.pdfs.length > 0) {
+          data.pdfs.forEach(pdf => {
+            const pdfItem = document.createElement('div');
+            pdfItem.className = 'uploaded-pdf-item';
+            pdfItem.textContent = pdf.title; // Display full title without truncation
+            pdfItem.onclick = () => {
+              const hash = pdf.doc_id.replace('PDF_', '');
+              const filePath = `/data/uploaded_docs/${hash}.pdf`;
+              fetch(filePath)
+                .then(response => {
+                  if (response.ok) {
+                    pdfIframe.src = filePath;
+                    pdfViewer.style.display = 'flex';
+                  } else {
+                    addMessage('Error: Knowledge base available but File missing in Storage', 'bot', 'error');
+                  }
+                })
+                .catch(() => {
+                  addMessage('Error: Knowledge base available but File missing in Storage', 'bot', 'error');
+                });
+            };
+            knowledgesList.appendChild(pdfItem);
+          });
+        } else {
+          const noPdfs = document.createElement('div');
+          noPdfs.className = 'uploaded-pdf-item';
+          noPdfs.textContent = 'No PDFs uploaded';
+          knowledgesList.appendChild(noPdfs);
+        }
+      } catch (error) {
+        console.error('Error fetching uploaded PDFs:', error);
+        knowledgesList.innerHTML = '';
+        const errorItem = document.createElement('div');
+        errorItem.className = 'uploaded-pdf-item';
+        errorItem.textContent = 'Error loading PDFs';
+        knowledgesList.appendChild(errorItem);
+      }
+    }
+    function addMessage(text, sender, contextType = 'general', sourcePaper = '') {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `flex items-start gap-3 ${sender === 'user' ? 'justify-end space-x-reverse' : 'justify-start'} chat-message`;
+      const bgColor = sender === 'user' ? 'bg-white/25 text-white' : 'bg-white/15 text-white/95';
+      const favicon = sender === 'user' ? `
+        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center glass-effect">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      ` : `
+        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center glass-effect">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+      `;
+      const timestamp = getTimestamp();
+      const contextLabel = {
+        'memory': 'Chat History',
+        'general': 'General Knowledge',
+        'pdf': 'PDF Document (Vector + Graph)',
+        'error': 'Error',
+        'system': 'System Message',
+        'no_pdf': 'Out of Knowledge Base'
+      }[contextType] || contextType;
+      const sourcePaperLabel = contextType === 'pdf' && sourcePaper ? ` | Paper: ${sourcePaper}` : '';
+      const copyButton = sender === 'bot' ? `
+        <button class="copy-button p-1 rounded-lg bg-white/20 text-white transition" title="Copy Response" onclick="navigator.clipboard.writeText('${text.replace(/'/g, "\\'")}')">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </button>
+      ` : '';
+      messageDiv.innerHTML = `
+        ${sender === 'user' ? '' : favicon}
+        <div class="max-w-lg p-5 rounded-xl glass-effect ${bgColor} flex flex-col space-y-2">
+          <div>${text.replace(/\n/g, '<br>')}</div>
+          <div class="flex justify-between items-center">
+            ${sender === 'bot' ? copyButton : ''}
+            <div class="text-xs opacity-70 text-right">${timestamp} | Source: ${contextLabel}${sourcePaperLabel}</div>
+          </div>
+        </div>
+        ${sender === 'user' ? favicon : ''}
+      `;
+      chatContainer.appendChild(messageDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    function showTypingIndicator() {
+      const typingDiv = document.createElement('div');
+      typingDiv.id = 'typing-indicator';
+      typingDiv.className = 'flex justify-start';
+      typingDiv.innerHTML = `
+        <div class="p-4 glass-effect rounded-xl bg-white/15">
+          <div class="flex space-x-2">
+            <div class="w-2.5 h-2.5 bg-white/60 rounded-full typing-dot" style="animation-delay: 0ms;"></div>
+            <div class="w-2.5 h-2.5 bg-white/60 rounded-full typing-dot" style="animation-delay: 200ms;"></div>
+            <div class="w-2.5 h-2.5 bg-white/60 rounded-full typing-dot" style="animation-delay: 400ms;"></div>
+          </div>
+        </div>
+      `;
+      chatContainer.appendChild(typingDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    function removeTypingIndicator() {
+      const typingIndicator = document.getElementById('typing-indicator');
+      if (typingIndicator) typingIndicator.remove();
+    }
+    let isSidebarOpen = false;
+    function updateSidebar() {
+      sidebar.classList.toggle('open', isSidebarOpen);
+      toggleIcon.innerHTML = isSidebarOpen
+        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />`
+        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />`;
+    }
+    function toggleView(view) {
+      chatContainer.style.display = view === 'chat' ? 'block' : 'none';
+      chatForm.style.display = view === 'chat' ? 'block' : 'none';
+      uploadContainer.style.display = view === 'upload' ? 'flex' : 'none';
+      knowledgesContainer.style.display = view === 'knowledges' ? 'flex' : 'none';
+    }
+    toggleSidebarBtn.addEventListener('click', () => {
+      isSidebarOpen = !isSidebarOpen;
+      updateSidebar();
+    });
+    document.getElementById('new-chat').addEventListener('click', (e) => {
+      e.preventDefault();
+      chatContainer.innerHTML = '';
+      toggleView('chat');
+    });
+    document.getElementById('upload-pdf').addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleView('upload');
+    });
+    document.getElementById('uploaded-knowledges').addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleView('knowledges');
+      populateUploadedPdfs();
+    });
+    goBackButton.addEventListener('click', () => {
+      toggleView('chat');
+    });
+    knowledgesGoBackButton.addEventListener('click', () => {
+      toggleView('chat');
+    });
+    closePopup.addEventListener('click', () => {
+      successPopup.style.display = 'none';
+    });
+    closePdfButton.addEventListener('click', () => {
+      pdfViewer.style.display = 'none';
+      pdfIframe.src = '';
+    });
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = pdfFile.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      uploadButton.disabled = true;
+      goBackButton.disabled = true;
+      loader.style.display = 'flex';
+      try {
+        const response = await fetch(`${API_URL}/graph/upload-pdf/`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        loader.style.display = 'none';
+        uploadButton.disabled = false;
+        goBackButton.disabled = false;
+        if (response.ok) {
+          successPopup.style.display = 'block';
+          setTimeout(() => { successPopup.style.display = 'none'; }, 3000);
+          pdfFile.value = '';
+        } else {
+          addMessage(`Error: ${data.detail || 'Failed to upload PDF'}`, 'bot', 'error');
+        }
+      } catch (error) {
+        loader.style.display = 'none';
+        uploadButton.disabled = false;
+        goBackButton.disabled = false;
+        addMessage('Error: Cannot connect to the server. Please ensure the FastAPI server is running.', 'bot', 'error');
+      }
+    });
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (!message) return;
+      addMessage(message, 'user');
+      userInput.value = '';
+      showTypingIndicator();
+      try {
+        const response = await fetch(`${API_URL}/graph/chat/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: message })
+        });
+        const data = await response.json();
+        removeTypingIndicator();
+        if (response.ok) {
+          addMessage(data.response, 'bot', data.context, data.source_paper);
+        } else {
+          addMessage(`Error: ${data.detail || 'Server error'}`, 'bot', 'error');
+        }
+      } catch (error) {
+        removeTypingIndicator();
+        addMessage(`Error: Cannot connect to the server. Please ensure the FastAPI server is running.`, 'bot', 'error');
+      }
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 768 && !isSidebarOpen) {
+        isSidebarOpen = true;
+        updateSidebar();
+      }
+    });
+    updateSidebar();
+    updateStatus();
+    populateRecentChats();
+    setInterval(updateStatus, 30000);
+  </script>

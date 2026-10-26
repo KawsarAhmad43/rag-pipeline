@@ -1,0 +1,13 @@
+:root{ --bg:#0f1720; --card:#111827; --muted:#9aa4b2; --accent:#4f46e5; }
+body.admin{ background:linear-gradient(180deg,#071029 0%, #071428 60%); color:#fff; font-family:Inter,system-ui,Arial; margin:0; -webkit-font-smoothing:antialiased }
+.admin-header{ display:flex; gap:1rem; align-items:center; padding:1rem; background:linear-gradient(90deg,#071029, #0b1a2b); }
+.admin-main{ padding:1rem; }
+.controls{ display:flex; gap:.5rem; margin-bottom:1rem }
+button{ background:var(--accent); border:none; color:white; padding:.6rem 1rem; border-radius:8px; font-size:clamp(.95rem,1vw,1.05rem) }
+.status{ background:var(--card); color:var(--muted); padding:.75rem; border-radius:6px }
+
+/* responsive admin layout */
+@media (max-width:600px){
+	.admin-header{ flex-direction:column; align-items:flex-start }
+	.controls{ flex-direction:column }
+}

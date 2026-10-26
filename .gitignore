@@ -1,0 +1,40 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.ruff_cache
+.pytest_cache
+*.log
+
+# Virtual environments
+.venv
+.rag
+.env
+
+# others
+codetotext.py
+codebase_content.txt
+tree_view.py
+
+models/
+data/
+logging/
+chroma_db/*
+all_db/*
+embeddings/*
+chroma_db/*
+extracted_images/*
+*.json
+*.sqlite3
+
+
+neo4j_credential(keep_kawsar).txt
+folder_tree.py
+codebase_content_frontend.txt
+src/graph_rag/.env
+src/multimodal_rag/chroma_db/multimodal_rag_collection/*
+src/multimodal_rag/chroma_db/multimodal_rag_collection
+src/multimodal_rag/data/*

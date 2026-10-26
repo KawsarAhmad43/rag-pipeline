@@ -1,0 +1,184 @@
+services:
+  orchestrator:
+    build:
+      context: ../../
+      dockerfile: docker/orchestrator/Dockerfile
+    ports:
+      - "8082:8000"
+    environment:
+      - SIMPLE_RAG_URL=http://simple_rag:9000
+      - GRAPH_RAG_URL=http://graph_rag:2000
+      - MULTIMODAL_RAG_URL=http://multimodal_rag:5001
+      - AGENTIC_RAG_URL=http://agentic_rag:8001
+    env_file:
+      - ../../.env
+    depends_on:
+      - simple_rag
+      - graph_rag
+      - multimodal_rag
+      - agentic_rag
+    volumes:
+      - ../../src:/app/src
+      - ../../docker:/app/docker
+      - ../../static:/app/static
+    networks:
+      rag-network:
+        ipv4_address: 172.21.0.10
+
+  simple_rag:
+    build:
+      context: ../../
+      dockerfile: docker/pipelines/simple_rag/Dockerfile
+    ports:
+      - "9000:9000"
+    environment:
+      - SIMPLE_LLM_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/gemma-3-4b-it
+      - SIMPLE_EMBEDDING_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/gme-Qwen2-VL-2B-Instruct
+      - SIMPLE_RERANKER_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/bge-reranker-v2-m3
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    env_file:
+      - ../../.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      # - ../../src:/app/src
+      - ../../src:/app/src
+      - ../../data:/app/data
+      - /home/aiteam/Desktop/all_downloaded_models:/home/aiteam/Desktop/all_downloaded_models
+    networks:
+      rag-network:
+        ipv4_address: 172.21.0.20
+
+  graph_rag:
+    build:
+      context: ../../
+      dockerfile: docker/pipelines/graph_rag/Dockerfile
+    ports:
+      - "9001:2000"
+    environment:
+      - GRAPH_RAG_LLM_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/gemma-3-4b-it
+      - GRAPH_RAG_EMBEDDING_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/colnomic-embed-multimodal-3b
+      - GRAPH_RERANKER_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/bge-reranker-v2-m3
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    env_file:
+      - ../../.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      # - ../../src:/app/src
+      - ../../src:/app/src
+      - ../../data:/app/data
+      - /home/aiteam/Desktop/all_downloaded_models:/home/aiteam/Desktop/all_downloaded_models
+    networks:
+      rag-network:
+        ipv4_address: 172.21.0.30
+
+  multimodal_rag:
+    build:
+      context: ../../
+      dockerfile: docker/pipelines/multimodal_rag/Dockerfile
+    command: uvicorn src.multimodal_rag.backend.app:app --host 0.0.0.0 --port 5001
+    ports:
+      - "8001:5001"
+    environment:
+      - MultiModal_RAG_MODEL_CACHE_DIR=/home/aiteam/Desktop/all_downloaded_models
+      - MultiModal_RAG_EMBEDDER_MODEL=gme-Qwen2-VL-2B-Instruct
+      - MultiModal_RAG_RERANKER_PATH=/home/aiteam/Desktop/all_downloaded_models/bge-reranker-v2-m3
+      - MultiModal_RAG_GENERATOR_PATH=/home/aiteam/Desktop/all_downloaded_models/gemma-3-4b-it
+      - WHISPER_MODEL_PATH=/home/aiteam/Desktop/all_downloaded_models/whisper-tiny/
+      - KOKORO_MODEL_PATH=/home/aiteam/Desktop/all_downloaded_models/kokoro/kokoro-v1.0.int8.onnx
+      - KOKORO_VOICES_PATH=/home/aiteam/Desktop/all_downloaded_models/kokoro/voices-v1.0.bin
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    env_file:
+      - ../../.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ../../src:/app/src
+      - ../../data:/app/data
+      - multimodal_audio:/app/src/multimodal_rag/voice_notebook
+      - /home/aiteam/Desktop/all_downloaded_models:/home/aiteam/Desktop/all_downloaded_models
+    networks:
+      rag-network:
+        ipv4_address: 172.21.0.40
+
+  agentic_rag:
+    build:
+      context: ../../
+      dockerfile: docker/pipelines/agentic_rag/Dockerfile
+    command: python src/agentic_rag/agentic_rag_api_refactor/run.py --mode api
+    ports:
+      - "9002:8001"
+    environment:
+      - AGENTIC_LLM_MODEL_NAME=/home/aiteam/Desktop/all_downloaded_models/gemma-3-4b-it
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    env_file:
+      - ../../.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      # - ../../src:/app/src
+      - ../../src:/app/src
+      - ../../data:/app/data
+      - /home/aiteam/Desktop/all_downloaded_models:/home/aiteam/Desktop/all_downloaded_models
+    networks:
+      rag-network:
+        ipv4_address: 172.21.0.50
+
+  frontend:
+    build:
+      context: ../../
+      dockerfile: docker/static/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - orchestrator
+    volumes:
+      - ../../static:/usr/share/nginx/html
+      - multimodal_audio:/usr/share/nginx/html/audio
+    networks:
+      rag-network:
+        ipv4_address: 172.21.0.60
+
+networks:
+  rag-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+
+volumes:
+  multimodal_audio:

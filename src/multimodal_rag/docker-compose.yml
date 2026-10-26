@@ -1,0 +1,41 @@
+
+services:
+  backend:
+    build: .
+    container_name: multimodal_rag_backend
+    command: uvicorn backend.app:app --host 0.0.0.0 --port 5001
+    ports:
+      - "5001:5001"
+    environment:
+      - MultiModal_RAG_HOST=0.0.0.0
+      - MultiModal_RAG_PORT=5001
+      - MultiModal_RAG_MODEL_CACHE_DIR=/app/models
+      # Set API key here if not in .env, or use env_file
+      # - GOOGLE_API_KEY=your_key_here
+    env_file:
+      - ../../.env  # Attempt to load from project root .env
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./data:/app/data
+      - ./voice_notebook_output:/app/voice_notebook
+      # Map models directory.
+      # Option A: Map from project root models
+      - ../../models:/app/models
+      # Option B: Map from absolute path (uncomment if needed)
+      # - /home/aiteam/Desktop/all_downloaded_models:/app/models
+    restart: unless-stopped
+
+  frontend:
+    build: .
+    container_name: multimodal_rag_frontend
+    command: streamlit run frontend/interface.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - MultiModal_RAG_HOST=backend
+      - MultiModal_RAG_PORT=5001
+    env_file:
+      - ../../.env
+    depends_on:
+      - backend
+    restart: unless-stopped

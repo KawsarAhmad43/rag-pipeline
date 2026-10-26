@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAGAs Evaluation Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .chart-container { width: 80%; margin: 20px auto; }
+        .details { margin-top: 10px; font-size: 14px; }
+        .details p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">RAGAs Evaluation Results</h1>
+
+    <div id="dashboard"></div>
+
+    <script>
+        // Fetch evaluation history
+        fetch('/evaluate/ragas/history')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('dashboard');
+                data.evaluation_history.forEach((item, index) => {
+                    // Create a container for each evaluation result
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'chart-container';
+
+                    // Create canvas for the bar chart
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `ragasChart${index}`;
+                    resultDiv.appendChild(canvas);
+
+                    // Add details below the chart
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'details';
+                    detailsDiv.innerHTML = `
+                        <p><strong>Query:</strong> ${item.query}</p>
+                        <p><strong>Answer:</strong> ${item.answer}</p>
+                        <p><strong>Ground Truth:</strong> ${item.ground_truth || 'N/A'}</p>
+                    `;
+                    resultDiv.appendChild(detailsDiv);
+
+                    container.appendChild(resultDiv);
+
+                    // Prepare data for the bar chart
+                    const labels = ['Context Precision', 'Context Recall', 'Answer Relevancy', 'Faithfulness'];
+                    const dataValues = [
+                        item.scores.context_precision || 0,
+                        item.scores.context_recall || 0,
+                        item.scores.answer_relevancy || 0,
+                        item.scores.faithfulness || 0
+                    ];
+                    const backgroundColors = [
+                        'rgb(75, 192, 192)',
+                        'rgb(255, 99, 132)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 205, 86)'
+                    ];
+
+                    // Create the bar chart
+                    new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Scores',
+                                data: dataValues,
+                                backgroundColor: backgroundColors,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: { y: { beginAtZero: true, max: 1 } },
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false },
+                                title: {
+                                    display: true,
+                                    text: `Evaluation Result ${index + 1} (Timestamp: ${item.timestamp})`
+                                }
+                            }
+                        }
+                    });
+                });
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    </script>
+</body>
+</html>
